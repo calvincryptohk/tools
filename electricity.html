@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家用礦機真實電費計算機 (V8.4 實戰能效版)</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background-color: #1e1e1e; padding: 30px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); max-width: 480px; width: 100%; border: 1px solid #333; }
+        h2 { text-align: center; color: #F7931A; margin-top: 0; margin-bottom: 20px; font-size: 22px; }
+        .section-title { font-size: 14px; color: #888; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        
+        label { display: block; margin-bottom: 6px; font-size: 14px; color: #ccc; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 15px; background: #2c2c2c; border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 16px; box-sizing: border-box; transition: 0.2s; }
+        input:focus, select:focus { border-color: #F7931A; outline: none; }
+        
+        .toggle-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .toggle-btn { flex: 1; padding: 10px; background: #2c2c2c; border: 1px solid #444; border-radius: 8px; cursor: pointer; text-align: center; font-size: 14px; transition: 0.2s; }
+        .toggle-btn.active { background: #F7931A; color: #000; font-weight: bold; border-color: #F7931A; }
+
+        .result-card { background: #252525; border-radius: 12px; padding: 20px; border: 1px solid #333; margin-top: 20px; position: relative; overflow: hidden; }
+        .result-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 15px; }
+        .big-price { font-size: 28px; font-weight: bold; color: #ff4d4d; }
+        .sub-text { font-size: 12px; color: #666; }
+        
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; background: #333; color: #aaa; }
+        
+        .btn-calc { width: 100%; padding: 14px; background: #F7931A; border: none; border-radius: 8px; color: #000; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        .btn-calc:hover { background: #d67b10; }
+
+        .btn-link { width: 100%; padding: 12px; background: transparent; border: 1px solid #4CAF50; color: #4CAF50; border-radius: 8px; font-size: 14px; cursor: pointer; margin-top: 15px; text-align: center; text-decoration: none; display: block; box-sizing: border-box;}
+        .btn-link:hover { background: rgba(76, 175, 80, 0.1); }
+
+        .hidden { display: none; }
+        .source-link { font-size: 11px; color: #666; text-align: center; margin-top: 20px; }
+        
+        option[value="ru_hosting"], option[value="us_hosting"] {
+            font-weight: bold;
+            color: #4CAF50; 
+        }
+        /* 特別標註高效能機器 */
+        option.high-eff {
+            color: #F7931A; 
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🏠 家用礦機真實電費計算機</h2>
+    <div style="text-align:center; font-size:12px; color:#4CAF50; margin-bottom:15px;">✅ 數據庫已更新至 2026 最新電費</div>
+    
+    <div class="section-title">Step 1: 選擇你的所在地</div>
+    <select id="region" onchange="updateRegionUI()">
+        <option value="hk">🇭🇰 香港 (中電2026最新電費)</option>
+        <option value="tw">🇹🇼 台灣 (台電113年10月版)</option>
+        <option value="cn">🇨🇳 中國 (廣東2026標準版)</option>
+        <option value="ru_hosting" style="color:#F7931A;">🇷🇺 俄羅斯託管 (實戰價 $0.063)</option>
+        <option value="us_hosting" style="color:#F7931A;">🇺🇸 美國德州託管 (實戰價 $0.068)</option>
+        <option value="us">🇺🇸 美國家用 (各州平均)</option>
+    </select>
+
+    <div id="season-options" class="hidden">
+        <label>當前季節 (費率不同)</label>
+        <div class="toggle-group">
+            <div class="toggle-btn" onclick="setSeason(false)" id="btn-non-summer">❄️ 非夏季</div>
+            <div class="toggle-btn active" onclick="setSeason(true)" id="btn-summer">☀️ 夏季</div>
+        </div>
+        <div id="season-text" style="font-size:12px; color:#888; margin-bottom:10px;"></div>
+    </div>
+
+    <div id="us-state-options" class="hidden">
+        <label>選擇州份 (參考平均電價 USD/kWh)</label>
+        <select id="us_state" onchange="updateUSPrice()">
+            <option value="0.17">🇺🇸 全美平均 ($0.17)</option>
+            <option value="0.34">加州 California ($0.34) - 貴!</option>
+            <option value="0.23">紐約 New York ($0.23)</option>
+            <option value="0.14">德州 Texas 家用平均 ($0.14)</option> 
+            <option value="0.11">華盛頓 WA ($0.11)</option>
+            <option value="custom">自定義...</option>
+        </select>
+        <div id="us-custom-input" class="hidden">
+            <input type="number" id="us_custom_price" placeholder="輸入單價 (USD)" step="0.01">
+        </div>
+        <div style="font-size:11px; color:#666; margin-top:5px;">* 這是家用電價，如需託管價請在上方選擇「託管」</div>
+    </div>
+
+    <div class="section-title">Step 2: 你家原本每月用多少電?</div>
+    <label>家庭基本用電量 (度/kWh) <span style="color:#666; font-size:12px;">*查看舊電費單</span></label>
+    <input type="number" id="base_kwh" value="100" placeholder="例如: 100">
+
+    <div class="section-title">Step 3: 選擇礦機</div>
+    <label>礦機型號 (算力 | 功耗 | 能效比)</label>
+    <select id="miner_model" onchange="updateMinerSpecs()">
+        <option value="custom">自定義 (手動輸入)</option>
+        
+        <optgroup label="🔥 熱門推薦 (High Efficiency)">
+            
+            <option value="bitaxe_gamma" class="high-eff">Bitaxe Gamma 601 (1.2T | 17W | 14.2 J/T)</option>
+            <option value="nerdqaxe" class="high-eff">NerdQaxe++ (4.8T | 72W | 15.0 J/T)</option>
+            <option value="nerdqaxe_hydro" class="high-eff">NerdQaxe++ Hydro (4.8T | 72W | 15.0 J/T)</option>
+            <option value="nerdqaxe_v6" class="high-eff">NerdQaxe++ Rev 6.1 (6T | 100W | 16.7 J/T)</option>
+            <option value="nerdqaxe_v6_hydro" class="high-eff">NerdQaxe++ Rev 6.1 Hydro (6T | 100W | 16.7 J/T)</option>
+            <option value="nerdqx" class="high-eff">NerdQX (8T | 125W | 15.6 J/T)</option>
+            <option value="nerdoctaxe" class="high-eff">Nerdoctaxe (9.6T | 160W | 16.7 J/T)</option>
+        </optgroup>
+
+        <optgroup label="🏠 家用進階 (Home Miners)">
+            <option value="avalon_nano">Avalon Nano 3S (6T | 140W | 23.3 J/T)</option>
+            <option value="bitaxe_suprahex">Bitaxe SupraHex 701 (4.2T | 90W | 21.4 J/T)</option>
+            <option value="avalon_q">Avalon Q (90T | 1674W | 18.6 J/T)</option>
+        </optgroup>
+
+        <optgroup label="🏭 工業級/樂透機">
+            <option value="m63_hydro">Whatsminer M63 Hydro (450T | 9450W | 21.0 J/T)</option>
+            <option value="nmminer_v2">NMMiner V2 (1000K | 1W | Lottery)</option>
+            <option value="nerdminer_v2">Nerdminer V2 Pro (78K | 3.5W | Lottery)</option>
+        </optgroup>
+    </select>
+
+    <div style="display: flex; gap: 10px;">
+        <div style="flex:1">
+            <label>功耗 (W)</label>
+            <input type="number" id="miner_watts" value="1674">
+        </div>
+        <div style="flex:1">
+            <label>24h 開機?</label>
+            <select id="miner_hours">
+                <option value="24">是 (24小時)</option>
+                <option value="12">否 (只開12小時)</option>
+            </select>
+        </div>
+    </div>
+
+    <button class="btn-calc" onclick="calculate()">💰 計算真實電費</button>
+
+    <div class="result-card" id="result-area" style="opacity: 0.5;">
+        <div class="result-row">
+            <span>礦機每月耗電</span>
+            <span class="badge" id="miner_kwh_display">0 kWh</span>
+        </div>
+        <div class="result-row">
+            <span>原本電費 (不含礦機)</span>
+            <span id="cost_base">$0.00</span>
+        </div>
+        <div class="result-row">
+            <span>總電費 (含礦機)</span>
+            <span id="cost_total">$0.00</span>
+        </div>
+        <hr style="border: 0; border-top: 1px solid #444; margin: 15px 0;">
+        <div class="result-row">
+            <div>
+                <span style="font-weight:bold; color:#fff;">礦機真實電費</span><br>
+                <span class="sub-text">這是你因挖礦多付的錢</span>
+            </div>
+            <div style="text-align: right;">
+                <div class="big-price" id="real_cost">$0.00</div>
+                <div class="sub-text" id="avg_price_display">平均 $0.00 /度</div>
+            </div>
+        </div>
+    </div>
+
+    <a href="profit.html" class="btn-link">
+        👉 算完電費了？點此看看這台機器的<b>賺錢能力</b> (Solo/Pool)
+    </a>
+    
+    <div class="source-link">
+        J/T = 焦耳/太哈希 (數值越低越省電) | 數據更新: 2026/01
+    </div>
+</div>
+
+<script>
+    let isSummer = true;
+
+    // 礦機功耗數據 (單位: Watts)
+    // 更新所有型號功耗
+    const miners = {
+        'avalon_q': 1674,
+        'avalon_nano': 140,
+        'bitaxe_suprahex': 90,
+        'bitaxe_gamma': 17,
+        'nerdqaxe': 72,
+        'nerdqaxe_hydro': 72,
+        'nerdqaxe_v6': 100,
+        'nerdqaxe_v6_hydro': 100,
+        'nerdqx': 125,
+        'nerdoctaxe': 160,
+        'nmminer_v2': 1,
+        'nerdminer_v2': 3.5,
+        'm63_hydro': 9450
+    };
+
+    function setSeason(val) {
+        isSummer = val;
+        document.getElementById('btn-summer').className = val ? 'toggle-btn active' : 'toggle-btn';
+        document.getElementById('btn-non-summer').className = val ? 'toggle-btn' : 'toggle-btn active';
+        calculate();
+    }
+
+    function updateRegionUI() {
+        const region = document.getElementById('region').value;
+        document.getElementById('season-options').className = (region === 'tw' || region === 'cn') ? '' : 'hidden';
+        if(region === 'tw') document.getElementById('season-text').innerText = "台灣夏季：6月1日 - 9月30日";
+        if(region === 'cn') document.getElementById('season-text').innerText = "廣東夏季：5月 - 10月";
+        
+        document.getElementById('us-state-options').className = (region === 'us') ? '' : 'hidden';
+        calculate();
+    }
+
+    function updateUSPrice() {
+        const val = document.getElementById('us_state').value;
+        if(val === 'custom') {
+            document.getElementById('us-custom-input').className = '';
+        } else {
+            document.getElementById('us-custom-input').className = 'hidden';
+        }
+        calculate();
+    }
+
+    function updateMinerSpecs() {
+        const model = document.getElementById('miner_model').value;
+        if (miners[model]) {
+            document.getElementById('miner_watts').value = miners[model];
+        }
+        calculate();
+    }
+
+    // --- 算法引擎 (保持不變) ---
+    function calcHK_CLP(kwh) {
+        const fuel = 0.394;
+        let cost = 0;
+        const tiers = [
+            { limit: 200, rate: 0.945 }, { limit: 500, rate: 1.079 }, 
+            { limit: 900, rate: 1.237 }, { limit: 1300, rate: 1.545 },
+            { limit: 1700, rate: 1.774 }, { limit: 2100, rate: 1.878 },
+            { limit: Infinity, rate: 1.890 }
+        ];
+        let remaining = kwh;
+        let prevLimit = 0;
+        for (let tier of tiers) {
+            let chunk = Math.min(remaining, tier.limit - prevLimit);
+            if (chunk <= 0) break;
+            cost += chunk * (tier.rate + fuel);
+            remaining -= chunk;
+            prevLimit = tier.limit;
+        }
+        let rebateRate = 0;
+        if (kwh > 0 && kwh <= 400) {
+            if (kwh <= 200) rebateRate = 0.172;
+            else if (kwh <= 300) rebateRate = 0.162;
+            else rebateRate = 0.152;
+        }
+        return cost - (kwh * rebateRate);
+    }
+
+    function calcTW_TPC(kwh, summer) {
+        let cost = 0;
+        const tiers = summer ? 
+            [{ limit: 120, rate: 1.78 }, { limit: 330, rate: 2.55 }, { limit: 500, rate: 3.80 }, { limit: 700, rate: 5.14 }, { limit: 1000, rate: 6.44 }, { limit: Infinity, rate: 8.86 }] : 
+            [{ limit: 120, rate: 1.78 }, { limit: 330, rate: 2.26 }, { limit: 500, rate: 3.13 }, { limit: 700, rate: 4.24 }, { limit: 1000, rate: 5.27 }, { limit: Infinity, rate: 7.03 }];
+        let remaining = kwh;
+        let prevLimit = 0;
+        for (let tier of tiers) {
+            let chunk = Math.min(remaining, tier.limit - prevLimit);
+            if (chunk <= 0) break;
+            cost += chunk * tier.rate;
+            remaining -= chunk;
+            prevLimit = tier.limit;
+        }
+        return cost;
+    }
+
+    function calcCN_StateGrid(kwh, summer) {
+        const baseRate = 0.60;
+        let cost = 0;
+        if (summer) { 
+            if (kwh <= 260) cost = kwh * baseRate;
+            else if (kwh <= 600) cost = (260 * baseRate) + (kwh - 260) * (baseRate + 0.05);
+            else cost = (260 * baseRate) + (340 * (baseRate + 0.05)) + (kwh - 600) * (baseRate + 0.30);
+        } else { 
+            if (kwh <= 200) cost = kwh * baseRate;
+            else if (kwh <= 400) cost = (200 * baseRate) + (kwh - 200) * (baseRate + 0.05);
+            else cost = (200 * baseRate) + (200 * (baseRate + 0.05)) + (kwh - 400) * (baseRate + 0.30);
+        }
+        return cost;
+    }
+
+    function calculate() {
+        const region = document.getElementById('region').value;
+        const baseKwh = parseFloat(document.getElementById('base_kwh').value) || 0;
+        const watts = parseFloat(document.getElementById('miner_watts').value) || 0;
+        const hours = parseFloat(document.getElementById('miner_hours').value) || 24;
+        const minerKwh = (watts * hours * 30) / 1000;
+        const totalKwh = baseKwh + minerKwh;
+
+        let costBase = 0;
+        let costTotal = 0;
+        let currency = '';
+
+        if (region === 'hk') {
+            costBase = calcHK_CLP(baseKwh);
+            costTotal = calcHK_CLP(totalKwh);
+            currency = 'HK$';
+        } else if (region === 'tw') {
+            costBase = calcTW_TPC(baseKwh, isSummer);
+            costTotal = calcTW_TPC(totalKwh, isSummer);
+            currency = 'NT$';
+        } else if (region === 'cn') {
+            costBase = calcCN_StateGrid(baseKwh, isSummer);
+            costTotal = calcCN_StateGrid(totalKwh, isSummer);
+            currency = '¥';
+        } else if (region === 'ru_hosting') {
+            const hostingRate = 0.063;
+            costBase = baseKwh * hostingRate;
+            costTotal = totalKwh * hostingRate;
+            currency = 'US$';
+        } else if (region === 'us_hosting') {
+            const hostingRate = 0.068;
+            costBase = baseKwh * hostingRate;
+            costTotal = totalKwh * hostingRate;
+            currency = 'US$';
+        } else {
+            let usRate = parseFloat(document.getElementById('us_state').value);
+            if(isNaN(usRate)) usRate = parseFloat(document.getElementById('us_custom_price').value) || 0.17;
+            costBase = baseKwh * usRate;
+            costTotal = totalKwh * usRate;
+            currency = 'US$';
+        }
+
+        const realMinerCost = costTotal - costBase;
+        const realUnitCost = (minerKwh > 0) ? (realMinerCost / minerKwh) : 0;
+
+        document.getElementById('result-area').style.opacity = 1;
+        document.getElementById('miner_kwh_display').innerText = minerKwh.toFixed(1) + ' kWh';
+        document.getElementById('cost_base').innerText = currency + costBase.toFixed(2);
+        document.getElementById('cost_total').innerText = currency + costTotal.toFixed(2);
+        document.getElementById('real_cost').innerText = currency + realMinerCost.toFixed(2);
+        document.getElementById('avg_price_display').innerText = `(礦機真實單價: ${currency}${realUnitCost.toFixed(3)} /度)`;
+    }
+
+    calculate();
+</script>
+
+</body>
+</html>

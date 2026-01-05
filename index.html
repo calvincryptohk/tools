@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能挖礦戰略計算機 (V8.2 數據同步版)</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background-color: #1e1e1e; padding: 30px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); max-width: 600px; width: 100%; border: 1px solid #333; }
+        h2 { text-align: center; color: #F7931A; margin-top: 0; margin-bottom: 10px; font-size: 24px; }
+        
+        .section-title { font-size: 14px; color: #888; margin-bottom: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 5px; margin-top: 25px;}
+        
+        label { display: block; margin-bottom: 6px; font-size: 13px; color: #ccc; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 10px; background: #2c2c2c; border: 1px solid #444; color: #fff; border-radius: 8px; font-size: 16px; box-sizing: border-box; transition: 0.2s; }
+        input:focus, select:focus { border-color: #F7931A; outline: none; }
+        
+        .btn-calc { width: 100%; padding: 14px; background: #F7931A; border: none; border-radius: 8px; color: #000; font-weight: bold; font-size: 16px; cursor: pointer; margin-top: 20px; }
+        .btn-calc:hover { background: #d67b10; }
+
+        .btn-link { width: 100%; padding: 12px; background: transparent; border: 1px solid #4CAF50; color: #4CAF50; border-radius: 8px; font-size: 14px; cursor: pointer; margin-top: 20px; text-align: center; text-decoration: none; display: block; box-sizing: border-box;}
+        .btn-link:hover { background: rgba(76, 175, 80, 0.1); }
+
+        .result-box { display: flex; gap: 10px; margin-top: 15px; }
+        .card { flex: 1; background: #252525; padding: 15px; border-radius: 10px; border: 1px solid #444; text-align: center; }
+        .card-val { font-size: 18px; font-weight: bold; color: #fff; }
+        .card-sub { font-size: 11px; color: #666; margin-top: 5px; }
+        
+        .highlight-green { color: #4CAF50; }
+        .highlight-gold { color: #FFD700; }
+        .highlight-blue { color: #00e5ff; }
+
+        .compare-box { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-top: 15px; border-left: 4px solid #F7931A; }
+        .compare-text { font-size: 14px; line-height: 1.5; color: #ddd; }
+
+        .hidden { display: none; }
+        
+        /* 外部連結按鈕樣式 */
+        .external-link-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 152, 0, 0.1);
+            border: 1px dashed #F7931A;
+            color: #F7931A;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 13px;
+            text-decoration: none;
+            margin-bottom: 15px;
+            transition: 0.2s;
+        }
+        .external-link-btn:hover {
+            background: rgba(255, 152, 0, 0.2);
+        }
+        
+        optgroup { color: #aaa; font-style: italic; }
+        option { color: #fff; font-style: normal; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>⛏️ 智能挖礦戰略計算機</h2>
+    <div style="text-align:center; font-size:12px; color:#666; margin-bottom:20px;">
+        數據來源：Mempool.space (權威驗證)
+    </div>
+
+    <div class="section-title">1. 選擇你的裝備</div>
+    <select id="region" onchange="updateCurrency()">
+        <option value="hk">🇭🇰 香港 (HKD)</option>
+        <option value="tw">🇹🇼 台灣 (TWD)</option>
+        <option value="us">🇺🇸 美國 (USD)</option>
+        <option value="other">🌏 其他地區 / 自定義</option>
+    </select>
+
+    <div style="display:flex; gap:10px;">
+        <div style="flex:1">
+            <label>你的算力 (TH/s)</label>
+            <input type="number" id="hashrate" value="90" oninput="calculate()"> 
+        </div>
+        <div style="flex:1">
+            <label>快速選擇</label>
+            <select id="preset_miner" onchange="applyPreset()">
+                <option value="">請選擇...</option>
+                
+                <optgroup label="🔥 推薦主力 (Main)">
+                    <option value="90">Avalon Q (90T)</option>
+                    <option value="450">Whatsminer M63 Hydro (450T)</option>
+                </optgroup>
+
+                <optgroup label="🏠 家庭高效 (Home/Efficiency)">
+                    <option value="1.2">Bitaxe Gamma 601 (1.2T)</option>
+                    <option value="4.2">Bitaxe SupraHex 701 (4.2T)</option>
+                    <option value="4.8">NerdQaxe++ (4.8T)</option>
+                    <option value="6">NerdQaxe++ Rev 6.1 (6T)</option>
+                    <option value="6">Avalon Nano 3S (6T)</option>
+                    <option value="8">NerdQX (8T)</option>
+                    <option value="9.6">Nerdoctaxe (9.6T)</option>
+                </optgroup>
+
+                <optgroup label="🎰 樂透嘗試 (Lottery)">
+                    <option value="0.000001">NMMiner V2 (1000K)</option>
+                    <option value="0.000000078">Nerdminer V2 Pro (78K)</option>
+                </optgroup>
+            </select>
+        </div>
+    </div>
+
+    <div class="section-title">2. 輸入即時全網算力</div>
+    
+    <a href="https://mempool.space/graphs/mining/hashrate-difficulty" target="_blank" class="external-link-btn">
+        🔍 點此查看 Mempool 實時算力 (找 Hashrate MA 數值) ↗
+    </a>
+
+    <label>全網總算力 (ZH/s)</label>
+    <input type="number" id="network_hashrate_input" value="1.06" step="0.01" oninput="calculate()" placeholder="例如: 1.06">
+    <div style="font-size:11px; color:#666; margin-top:-5px; margin-bottom:15px;">* 預設為 1.06 ZH/s (2026/1 數據)，請根據網站更新</div>
+
+    <div style="display:flex; gap:10px;">
+        <div style="flex:1">
+            <label>當前幣價 (USD)</label>
+            <input type="number" id="btc_price" value="90292"> 
+        </div>
+        <div style="flex:1">
+            <label>礦池手續費 (%)</label>
+            <input type="number" id="pool_fee" value="4" placeholder="PPS+ 4%">
+        </div>
+    </div>
+
+    <div class="section-title">3. HODL 目標價</div>
+    <div style="display:flex; gap:10px;">
+        <div style="flex:1">
+            <label style="color:#00e5ff;">🚀 牛市目標價 (USD)</label>
+            <input type="number" id="target_price" value="200000" style="border-color:#00e5ff; color:#00e5ff; font-weight:bold;">
+        </div>
+    </div>
+
+    <button class="btn-calc" onclick="calculate()">🚀 開始計算</button>
+
+    <div id="results" class="hidden">
+        
+        <div class="section-title">🎰 SOLO 樂透挖礦</div>
+        <div class="result-box">
+            <div class="card">
+                <div class="card-val highlight-gold" id="solo_prob_month">0%</div>
+                <div class="card-sub">每月機率</div>
+            </div>
+            <div class="card">
+                <div class="card-val highlight-gold" id="solo_prob_year">0%</div>
+                <div class="card-sub">每年機率</div>
+            </div>
+        </div>
+        
+        <div class="compare-box" style="border-left-color: #FFD700; background: rgba(255, 215, 0, 0.1);">
+            <div class="compare-text" id="solo_comment" style="color:#ddd;"></div>
+        </div>
+
+        <div class="section-title" style="margin-top:20px;">🐜 聯合挖礦 (穩健囤幣)</div>
+        <div class="result-box">
+            <div class="card">
+                <div class="card-val highlight-green" id="pool_monthly_btc">0.00000000</div>
+                <div class="card-sub">每月囤幣 (淨)</div>
+            </div>
+            <div class="card" style="border-color: #00e5ff;">
+                <div class="card-val highlight-blue" id="pool_future_val">$0</div>
+                <div class="card-sub">牛市價值 (<span class="currency_code">HKD</span>)</div>
+            </div>
+        </div>
+        <div class="compare-box" style="background: rgba(0, 229, 255, 0.1); border-left-color: #00e5ff;">
+            <div class="compare-text" id="hodl_message"></div>
+        </div>
+
+    </div>
+
+    <a href="electricity.html" class="btn-link">👉 機器耗電多少？點此計算<b>真實電費</b></a>
+    
+</div>
+
+<script>
+    let exchangeRates = { 'hk': 7.78, 'tw': 32.5, 'us': 1, 'other': 1 };
+    
+    // 初始化：只抓幣價，不抓難度 (避免 Error)
+    async function initData() {
+        try {
+            const priceRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd,hkd,twd').catch(()=>null);
+            if(priceRes && priceRes.ok) {
+                const priceData = await priceRes.json();
+                if(priceData.bitcoin) {
+                    document.getElementById('btc_price').value = priceData.bitcoin.usd;
+                    exchangeRates.hk = priceData.bitcoin.hkd / priceData.bitcoin.usd;
+                    exchangeRates.tw = priceData.bitcoin.twd / priceData.bitcoin.usd;
+                }
+            }
+        } catch (e) {
+            console.log("Price API failed, using default.");
+        }
+        calculate();
+    }
+
+    function calculate() {
+        const region = document.getElementById('region').value;
+        const th = parseFloat(document.getElementById('hashrate').value);
+        const targetPrice = parseFloat(document.getElementById('target_price').value);
+        const poolFeePercent = parseFloat(document.getElementById('pool_fee').value);
+        const exchangeRate = exchangeRates[region] || 1;
+        
+        // 1. 獲取用戶輸入的全網算力 (ZH/s)
+        const inputZH = parseFloat(document.getElementById('network_hashrate_input').value) || 1.06;
+        
+        // 2. 轉換為實際 Hashrate (H/s)
+        // 1 ZH/s = 10^21 H/s
+        const networkHashrateRaw = inputZH * 1e21;
+
+        // 3. 反推難度 (用於 Pool 計算公式)
+        // Difficulty = NetworkHashrate * 600 / 2^32
+        const simulatedDiff = networkHashrateRaw * 600 / 4294967296;
+
+        // --- SOLO 機率計算 ---
+        const myHashrate = th * 1e12; 
+        const share = myHashrate / networkHashrateRaw;
+        
+        const probDay = 1 - Math.pow((1 - share), 144); 
+        const probMonth = 1 - Math.pow((1 - probDay), 30);
+        const probYear = 1 - Math.pow((1 - probDay), 365);
+        const oneInYear = Math.round(1 / probYear);
+
+        let monthText = (probMonth * 100).toFixed(5) + "%";
+        if(probMonth < 0.00001) monthText = "< 0.00001%";
+        
+        let yearText = (probYear * 100).toFixed(4) + "%";
+        if (oneInYear < 1000000) yearText += ` <br><span style="font-size:12px; color:#aaa;">(約 ${oneInYear.toLocaleString()} 分之一)</span>`;
+
+        document.getElementById('solo_prob_month').innerHTML = monthText;
+        document.getElementById('solo_prob_year').innerHTML = yearText;
+
+        let soloComment = "";
+        if (th < 0.01) {
+            soloComment = "🎰 <b>微型樂透：</b>這是純粹的信仰與運氣。雖然機率極低，但這就是比特幣的浪漫——任何人都有機會。";
+        } else if (oneInYear > 5000) {
+            soloComment = "🎲 <b>長期戰役：</b>這機率類似買彩票。但只要中一次 Block (3.125 BTC)，所有成本瞬間回本！";
+        } else if (oneInYear > 1000) {
+            soloComment = "🔥 <b>挑戰運氣：</b>雖然建議聯合挖礦，但偶爾切換 Solo 模式試試手氣也是一種樂趣。";
+        } else {
+            soloComment = "🚀 <b>具備潛力：</b>你的算力在 Solo 模式下有不錯的數學期望值。";
+        }
+        document.getElementById('solo_comment').innerHTML = soloComment;
+
+        // --- POOL 計算 ---
+        let dailyBTC = (myHashrate * 86400 * 3.125) / (simulatedDiff * 4294967296);
+        dailyBTC = dailyBTC * (1 - poolFeePercent/100); 
+        const monthlyBTC = dailyBTC * 30;
+        const futureFiat = monthlyBTC * targetPrice * exchangeRate;
+
+        document.getElementById('pool_monthly_btc').innerText = monthlyBTC.toFixed(8) + " BTC";
+        document.getElementById('pool_future_val').innerText = '$' + Math.floor(futureFiat).toLocaleString();
+
+        let hodlText = `💡 <b>Calvin 的觀點：</b><br>`;
+        hodlText += `如果未來 BTC 達到 <b>$${targetPrice.toLocaleString()}</b>，這台機器每月為你創造的潛在價值是 <b>$${Math.floor(futureFiat).toLocaleString()} ${region==='hk'?'HKD':(region==='tw'?'TWD':'USD')}</b>。`;
+        document.getElementById('hodl_message').innerHTML = hodlText;
+
+        document.getElementById('results').className = '';
+    }
+
+    function applyPreset() {
+        const val = document.getElementById('preset_miner').value;
+        if(val) {
+            document.getElementById('hashrate').value = val;
+            calculate();
+        }
+    }
+
+    function updateCurrency() {
+        const region = document.getElementById('region').value;
+        const els = document.getElementsByClassName('currency_code');
+        for(let el of els) {
+            if(region === 'hk') el.innerText = 'HKD';
+            else if(region === 'tw') el.innerText = 'TWD';
+            else el.innerText = 'USD';
+        }
+        calculate();
+    }
+    
+    initData();
+</script>
+
+</body>
+</html>
